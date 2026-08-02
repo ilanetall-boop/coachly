@@ -172,6 +172,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .chat-input-row input { flex:1; }
 .typing-dots { letter-spacing:2px; opacity:.6; animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:.9} }
+.ai-status { font-size:.82rem; color: var(--text-dim); margin:.2rem 0 .8rem; padding:.4rem .6rem;
+  background: var(--bg-elev); border:1px solid var(--border); border-radius:8px; }
+.ai-status .dot-green { color:#3fb950; } .ai-status .dot-red { color:#ff7b72; } .ai-status .dot-gray { color:#8b949e; }
 
 footer { text-align:center; color: var(--text-dim); font-size:.8rem; padding:2rem 1rem; }
 .hidden { display: none !important; }

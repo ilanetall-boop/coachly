@@ -176,6 +176,25 @@ function renderCoach() {
   const card = el("div", { class: "card", style: "grid-column:1/-1" });
   card.appendChild(el("h2", {}, ["💬 Parle à ton coach"]));
 
+  // Voyant d'état du coach IA
+  const statut = el("div", { class: "ai-status", id: "aiStatus" }, [
+    el("span", { class: "dot-gray" }, ["●"]), " Vérification du coach IA…"
+  ]);
+  card.appendChild(statut);
+  CoachAI.health().then(h => {
+    statut.innerHTML = "";
+    if (h.ok) {
+      statut.appendChild(el("span", { class: "dot-green" }, ["●"]));
+      statut.appendChild(document.createTextNode(` Coach IA actif (Gemini ${h.model || ""}) — tu discutes avec une vraie IA.`));
+    } else {
+      const raison = !h.hasKey
+        ? "clé GEMINI_API_KEY absente ou pas encore prise en compte"
+        : (h.error || h.note || "modèle indisponible");
+      statut.appendChild(el("span", { class: "dot-red" }, ["●"]));
+      statut.appendChild(document.createTextNode(` Coach hors-ligne (repli) — ${raison}.`));
+    }
+  });
+
   const feed = el("div", { class: "chat-feed", id: "chatFeed" });
   const hist = CoachChat.history();
   if (hist.length === 0) {

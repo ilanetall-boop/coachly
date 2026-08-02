@@ -7,6 +7,19 @@
 const CoachAI = {
   _disponible: null, // null=inconnu, true/false=testé
 
+  /* Diagnostic : la vraie IA est-elle active ? Renvoie { ok, hasKey, model, error } */
+  async health() {
+    try {
+      const r = await fetch("api/coach", { method: "GET" });
+      if (r.status === 404) return { ok: false, reason: "no_function", note: "Fonction /api absente (déploiement pas à jour ?)" };
+      const d = await r.json();
+      this._disponible = !!d.ok;
+      return d;
+    } catch (e) {
+      return { ok: false, reason: "network", note: "Serveur injoignable" };
+    }
+  },
+
   async send(messages, context) {
     try {
       const r = await fetch("api/coach", {
