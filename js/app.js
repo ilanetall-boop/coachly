@@ -281,19 +281,34 @@ function renderMesures() {
   ]));
 
   // Historique poids
+  const userDates = new Set((Store.state().poids || []).map(e => e.date));
   const rows = Store.poids().slice().reverse().map((p, i, arr) => {
     const prev = arr[i + 1];
     const d = prev ? p.kg - prev.kg : 0;
+    const editable = userDates.has(p.date);
     return el("tr", {}, [
       el("td", {}, [Coach.fmtDateFr(p.date)]),
       el("td", {}, [Coach.fmt(p.kg) + " kg"]),
       el("td", { class: d < 0 ? "down" : d > 0 ? "up" : "flat" }, [prev ? `${d > 0 ? "+" : ""}${Coach.fmt(d)}` : "—"]),
+      el("td", { style: "text-align:right" }, [
+        editable ? el("button", {
+          class: "btn ghost small", title: "Supprimer cette pesée",
+          onclick: () => {
+            if (!confirm(`Supprimer la pesée du ${Coach.fmtDateFr(p.date)} (${Coach.fmt(p.kg)} kg) ?`)) return;
+            Store.remove("poids", p.date);
+            const s = Store.state();
+            if (s.journal) { const j = s.journal.find(e => e.date === p.date); if (j) { delete j.poids; Store._save(s); Store._state = s; } }
+            rerender();
+          }
+        }, ["✕"]) : el("span", { class: "muted", title: "Donnée initiale" }, ["·"]),
+      ]),
     ]);
   });
   const tableCard = el("div", { class: "card", style: "grid-column:1/-1" }, [
     el("h2", {}, ["📜 Historique des pesées"]),
+    el("p", { class: "muted" }, ["Les pesées que tu as saisies ont un bouton ✕ pour les supprimer. Les données de départ (·) ne sont pas modifiables."]),
     el("table", {}, [
-      el("thead", {}, [el("tr", {}, [el("th", {}, ["Date"]), el("th", {}, ["Poids"]), el("th", {}, ["Δ"])])]),
+      el("thead", {}, [el("tr", {}, [el("th", {}, ["Date"]), el("th", {}, ["Poids"]), el("th", {}, ["Δ"]), el("th", {}, [""])])]),
       el("tbody", {}, rows),
     ]),
   ]);
