@@ -21,6 +21,17 @@ Aucune installation, aucune dépendance, aucun build.
 
 ---
 
+## Déployer sur Vercel
+
+Coachly est un site **statique** (aucun build). Vercel sert les fichiers tels quels.
+
+1. [vercel.com](https://vercel.com) → *Add New* → *Project* → importe le dépôt `coachly`.
+2. Framework Preset : **Other**. Build Command : *(vide)*. Output Directory : `.` (racine).
+3. **Production Branch = `main`** (Vercel déploie `main` par défaut).
+4. *Deploy* → URL type `https://coachly-xxxx.vercel.app`.
+
+> Chaque push sur `main` redéploie automatiquement.
+
 ## Installer sur téléphone (PWA)
 
 Coachly est une **app installable** :
