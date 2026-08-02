@@ -184,8 +184,9 @@ function renderCoach() {
   CoachAI.health().then(h => {
     statut.innerHTML = "";
     if (h.ok) {
+      const prov = h.provider === "groq" ? "Groq" : h.provider === "gemini" ? "Gemini" : "IA";
       statut.appendChild(el("span", { class: "dot-green" }, ["●"]));
-      statut.appendChild(document.createTextNode(` Coach IA actif (Gemini ${h.model || ""}) — tu discutes avec une vraie IA.`));
+      statut.appendChild(document.createTextNode(` Coach IA actif (${prov} ${h.model || ""}) — tu discutes avec une vraie IA.`));
     } else {
       const raison = !h.hasKey
         ? "clé GEMINI_API_KEY absente ou pas encore prise en compte"

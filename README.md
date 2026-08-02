@@ -46,13 +46,19 @@ Le chat fonctionne en deux modes :
 - **Sans clé** → coach « hors-ligne » (suivi des chiffres, séances, repas — par mots-clés).
 - **Avec une clé Gemini** → **vraie IA conversationnelle** qui voit tes données et te coache librement. La clé reste **côté serveur** (jamais dans le navigateur).
 
-**Mise en place (2 min, gratuit) :**
-1. Va sur [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → *Create API key* (offre gratuite).
-2. Dans **Vercel** → ton projet `coachly` → *Settings* → *Environment Variables* → ajoute :
-   - Name : `GEMINI_API_KEY` — Value : *(ta clé)*
-3. *Redeploy* (Deployments → ⋯ → Redeploy). Le chat devient une vraie IA.
+Deux fournisseurs supportés (détectés automatiquement) :
 
-> La fonction est dans `api/coach.js`. Pour utiliser Claude à la place, adapte cette fonction (API Anthropic) — coût par tokens.
+**Option recommandée — Groq (gratuit, sans carte bancaire, international) :**
+1. [console.groq.com/keys](https://console.groq.com/keys) → crée une clé.
+2. Vercel → projet `coachly` → *Settings* → *Environment Variables* → `GROQ_API_KEY` = *(ta clé)*.
+3. *Deployments* → ⋯ → *Redeploy*.
+
+**Option Gemini (free tier selon le pays — indisponible dans certains pays) :**
+1. [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → *Create API key*.
+2. Vercel → `GEMINI_API_KEY` = *(ta clé)* → Redeploy.
+
+> Si les deux clés sont présentes, Groq est prioritaire. La fonction est dans `api/coach.js`.
+> Voyant d'état dans l'onglet Coach : vert = IA active, rouge = repli + raison.
 
 ## Notifications
 
