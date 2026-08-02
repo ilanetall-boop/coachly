@@ -4,7 +4,7 @@
    et affiche les notifications de rappel quotidien.
    ========================================================================= */
 
-const CACHE = "coachly-v9";
+const CACHE = "coachly-v10";
 const ASSETS = [
   ".",
   "index.html",
@@ -36,13 +36,20 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-/* Stratégie : cache d'abord (app locale), réseau en secours. */
+/* Stratégie : RÉSEAU d'abord (toujours à jour quand en ligne), cache en
+   secours (hors-ligne). Évite de rester bloqué sur une vieille version. */
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return; // ne touche pas au cross-origin
   e.respondWith(
-    caches.match(e.request).then((cached) =>
-      cached || fetch(e.request).catch(() => caches.match("index.html"))
-    )
+    fetch(e.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(e.request).then((c) => c || caches.match("index.html")))
   );
 });
 
