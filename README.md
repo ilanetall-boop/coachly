@@ -21,6 +21,25 @@ Aucune installation, aucune dépendance, aucun build.
 
 ---
 
+## Déployer sur Vercel
+
+Coachly est un site **statique** (aucun build). Deux façons :
+
+**A. Depuis GitHub (le plus simple)**
+1. Va sur [vercel.com](https://vercel.com) → *Add New* → *Project* → importe le dépôt `coachly`.
+2. Framework Preset : **Other**. Build Command : *(vide)*. Output Directory : `.` (racine).
+3. ⚠️ **Branche de production** : par défaut Vercel déploie `main`. Le code est sur `claude/ilane-fitness-coaching-2h8l1t`. Soit tu fusionnes cette branche dans `main`, soit tu règles la *Production Branch* de Vercel sur cette branche (Settings → Git).
+4. *Deploy* → tu obtiens une URL type `https://coachly.vercel.app`.
+
+**B. En CLI**
+```bash
+npm i -g vercel
+vercel        # préversion
+vercel --prod # production
+```
+
+Ensuite, ouvre l'URL sur ton téléphone et installe l'app (voir ci-dessous).
+
 ## Installer sur téléphone (PWA)
 
 Coachly est une **app installable** :
