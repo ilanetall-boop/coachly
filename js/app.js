@@ -199,8 +199,10 @@ function renderCoach() {
   card.appendChild(el("div", { class: "chat-input-row" }, [input, send]));
 
   card.appendChild(el("p", { class: "muted", style: "margin-top:.6rem" }, [
-    "Ce coach comprend le langage naturel, met à jour tes données et fonctionne hors-ligne. ",
-    "Pour une conversation libre avec Claude, réponds à tes notifications dans l'app Claude."
+    el("b", {}, ["Coach IA :"]),
+    " si une clé Gemini est configurée sur le serveur, tu discutes avec une vraie IA (qui voit tes données). ",
+    "Sinon, repli automatique sur le coach hors-ligne (suivi des chiffres). ",
+    "Ton suivi (poids, pas, sport) est enregistré dans les deux cas."
   ]));
 
   const clear = el("button", { class: "btn ghost small", onclick: () => { CoachChat.clear(); rerender(); } }, ["🗑️ Effacer la conversation"]);
@@ -217,13 +219,34 @@ function addBubble(feed, role, text) {
   ]));
 }
 
-function sendChat(text) {
+async function sendChat(text) {
   text = (text || "").trim();
   if (!text) return;
   const feed = $("#chatFeed");
   CoachChat.push("user", text);
   addBubble(feed, "user", text);
-  const reply = CoachChat.respond(text);
+  feed.scrollTop = feed.scrollHeight;
+
+  // 1) Enregistre les données présentes (jamais sur une question)
+  const logres = CoachChat.tryLog(text);
+
+  // 2) Indicateur de saisie
+  const typing = el("div", { class: "bubble coach", id: "typingInd" }, [
+    el("div", { class: "bubble-inner" }, [el("span", { class: "typing-dots" }, ["● ● ●"])]),
+  ]);
+  feed.appendChild(typing);
+  feed.scrollTop = feed.scrollHeight;
+
+  // 3) Tente le vrai coach IA, sinon repli scripté
+  let reply;
+  const ai = await CoachAI.send(CoachChat.history().slice(-16), CoachAI.buildContext());
+  if (typing.parentNode) typing.remove();
+  if (ai.ok && ai.text) {
+    reply = (logres.kind ? `✓ ${logres.note}\n\n` : "") + ai.text;
+  } else {
+    reply = CoachChat.replyText(text, logres);
+  }
+
   CoachChat.push("coach", reply);
   addBubble(feed, "coach", reply);
   feed.scrollTop = feed.scrollHeight;

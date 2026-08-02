@@ -4,7 +4,7 @@
    et affiche les notifications de rappel quotidien.
    ========================================================================= */
 
-const CACHE = "coachly-v5";
+const CACHE = "coachly-v6";
 const ASSETS = [
   ".",
   "index.html",
@@ -15,6 +15,7 @@ const ASSETS = [
   "js/program.js",
   "js/nutrition.js",
   "js/chat.js",
+  "js/ai.js",
   "js/reminders.js",
   "js/app.js",
   "manifest.webmanifest",

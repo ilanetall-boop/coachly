@@ -170,6 +170,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .chip-btn:hover { border-color: var(--accent); }
 .chat-input-row { display:flex; gap:.5rem; }
 .chat-input-row input { flex:1; }
+.typing-dots { letter-spacing:2px; opacity:.6; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:.9} }
 
 footer { text-align:center; color: var(--text-dim); font-size:.8rem; padding:2rem 1rem; }
 .hidden { display: none !important; }

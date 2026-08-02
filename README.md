@@ -40,6 +40,20 @@ Coachly est une **app installable** :
 2. **iPhone :** bouton *Partager* → *Sur l'écran d'accueil*. **Android :** menu *⋮* → *Installer l'application*.
 3. Coachly apparaît comme une vraie app (icône, plein écran, fonctionne hors-ligne).
 
+## Activer le vrai coach IA (chat) — gratuit
+
+Le chat fonctionne en deux modes :
+- **Sans clé** → coach « hors-ligne » (suivi des chiffres, séances, repas — par mots-clés).
+- **Avec une clé Gemini** → **vraie IA conversationnelle** qui voit tes données et te coache librement. La clé reste **côté serveur** (jamais dans le navigateur).
+
+**Mise en place (2 min, gratuit) :**
+1. Va sur [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → *Create API key* (offre gratuite).
+2. Dans **Vercel** → ton projet `coachly` → *Settings* → *Environment Variables* → ajoute :
+   - Name : `GEMINI_API_KEY` — Value : *(ta clé)*
+3. *Redeploy* (Deployments → ⋯ → Redeploy). Le chat devient une vraie IA.
+
+> La fonction est dans `api/coach.js`. Pour utiliser Claude à la place, adapte cette fonction (API Anthropic) — coût par tokens.
+
 ## Notifications
 
 - **Rappel local** (onglet *Suivi quotidien* → *Rappel quotidien*) : notification de check-in à l'heure choisie, quand l'app est installée et ouverte / en arrière-plan.
