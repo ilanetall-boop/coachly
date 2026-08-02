@@ -168,6 +168,67 @@ function statTile(label, val, sub, cls = "") {
 }
 
 /* ---------------------------------------------------------------------------
+   Onglet : Coach (chat)
+--------------------------------------------------------------------------- */
+function renderCoach() {
+  const wrap = el("div", { class: "grid" });
+  const card = el("div", { class: "card", style: "grid-column:1/-1" });
+  card.appendChild(el("h2", {}, ["💬 Parle à ton coach"]));
+
+  const feed = el("div", { class: "chat-feed", id: "chatFeed" });
+  const hist = CoachChat.history();
+  if (hist.length === 0) {
+    addBubble(feed, "coach", "Salut Ilane 💪 Je suis ton coach intégré. Donne-moi tes chiffres (« je pèse 81 », « 9500 pas », « séance A faite ») ou demande-moi ta séance, un repas, ou « où j'en suis ? ». On vise le physique Tom Holland — on ne relâche rien.");
+  } else {
+    for (const m of hist) addBubble(feed, m.role, m.text);
+  }
+  card.appendChild(feed);
+
+  // Chips d'actions rapides
+  const chips = ["Séance du jour ?", "Quoi manger ?", "Où j'en suis ?", "J'ai craqué", "Motivation"];
+  const chipRow = el("div", { class: "chip-row" }, chips.map(c =>
+    el("button", { class: "chip-btn", onclick: () => sendChat(c) }, [c])
+  ));
+  card.appendChild(chipRow);
+
+  // Zone de saisie
+  const input = el("input", { type: "text", id: "chatInput", placeholder: "Écris à ton coach…", autocomplete: "off" });
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { sendChat(input.value); input.value = ""; } });
+  const send = el("button", { class: "btn", onclick: () => { sendChat(input.value); input.value = ""; } }, ["Envoyer"]);
+  card.appendChild(el("div", { class: "chat-input-row" }, [input, send]));
+
+  card.appendChild(el("p", { class: "muted", style: "margin-top:.6rem" }, [
+    "Ce coach comprend le langage naturel, met à jour tes données et fonctionne hors-ligne. ",
+    "Pour une conversation libre avec Claude, réponds à tes notifications dans l'app Claude."
+  ]));
+
+  const clear = el("button", { class: "btn ghost small", onclick: () => { CoachChat.clear(); rerender(); } }, ["🗑️ Effacer la conversation"]);
+  card.appendChild(clear);
+
+  wrap.appendChild(card);
+  setTimeout(() => { const f = $("#chatFeed"); if (f) f.scrollTop = f.scrollHeight; }, 0);
+  return wrap;
+}
+
+function addBubble(feed, role, text) {
+  feed.appendChild(el("div", { class: `bubble ${role}` }, [
+    el("div", { class: "bubble-inner" }, text.split("\n").flatMap((line, i) => i === 0 ? [line] : [el("br", {}), line])),
+  ]));
+}
+
+function sendChat(text) {
+  text = (text || "").trim();
+  if (!text) return;
+  const feed = $("#chatFeed");
+  CoachChat.push("user", text);
+  addBubble(feed, "user", text);
+  const reply = CoachChat.respond(text);
+  CoachChat.push("coach", reply);
+  addBubble(feed, "coach", reply);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+/* ---------------------------------------------------------------------------
    Onglet : Poids & Mesures
 --------------------------------------------------------------------------- */
 function renderMesures() {
@@ -569,6 +630,7 @@ function importData() {
 --------------------------------------------------------------------------- */
 const TABS = [
   { id: "dashboard", label: "📊 Tableau de bord", render: renderDashboard },
+  { id: "coach", label: "💬 Coach", render: renderCoach },
   { id: "mesures", label: "⚖️ Poids & Mesures", render: renderMesures },
   { id: "sport", label: "🏋️ Programme sport", render: renderSport },
   { id: "nutrition", label: "🍽️ Nutrition", render: renderNutrition },
