@@ -363,10 +363,40 @@ function renderNutrition() {
 /* ---------------------------------------------------------------------------
    Onglet : Suivi quotidien
 --------------------------------------------------------------------------- */
+function renderReminderCard() {
+  const cfg = Reminders.config();
+  const card = el("div", { class: "card", style: "grid-column:1/-1" });
+  const heure = el("input", { type: "time", value: cfg.heure || "20:00", style: "max-width:160px" });
+  const statut = el("span", { class: "muted" }, [
+    Reminders.supported()
+      ? (cfg.actif ? `✅ Rappel actif à ${cfg.heure}` : "Rappel désactivé")
+      : "⚠️ Notifications non supportées sur ce navigateur",
+  ]);
+  card.appendChild(el("h2", {}, ["🔔 Rappel quotidien (sur cet appareil)"]));
+  card.appendChild(el("div", { class: "row" }, [
+    el("label", { class: "field", style: "margin:0" }, [el("span", {}, ["Heure du rappel"]), heure]),
+    el("button", { class: "btn", onclick: async () => {
+      try { await Reminders.enable(heure.value); rerender(); }
+      catch (e) { alert(e.message); }
+    }}, ["Activer"]),
+    cfg.actif ? el("button", { class: "btn ghost", onclick: () => { Reminders.disable(); rerender(); } }, ["Désactiver"]) : null,
+    el("button", { class: "btn ghost small", onclick: () => Reminders._fire() }, ["Tester"]),
+  ]));
+  card.appendChild(el("div", { style: "margin-top:.5rem" }, [statut]));
+  card.appendChild(el("p", { class: "muted", style: "margin-top:.5rem" }, [
+    "Fonctionne quand l'app Coachly est installée et ouverte/en arrière-plan. ",
+    el("b", {}, ["Pour un rappel fiable même app fermée"]),
+    ", ton coach t'envoie aussi une notification chaque jour via Claude (email / app Claude)."
+  ]));
+  return card;
+}
+
 function renderSuivi() {
   const wrap = el("div", { class: "grid cols-2" });
   const d = today();
   const existing = Store.journal().find(j => j.date === d) || {};
+
+  wrap.appendChild(renderReminderCard());
 
   const scales = {};
   function emojiScale(name, emojis, current) {

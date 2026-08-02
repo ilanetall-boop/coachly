@@ -21,6 +21,19 @@ Aucune installation, aucune dépendance, aucun build.
 
 ---
 
+## Installer sur téléphone (PWA)
+
+Coachly est une **app installable** :
+
+1. Ouvre l'URL dans le navigateur du téléphone (Safari sur iPhone, Chrome sur Android).
+2. **iPhone :** bouton *Partager* → *Sur l'écran d'accueil*. **Android :** menu *⋮* → *Installer l'application*.
+3. Coachly apparaît comme une vraie app (icône, plein écran, fonctionne hors-ligne).
+
+## Notifications
+
+- **Rappel local** (onglet *Suivi quotidien* → *Rappel quotidien*) : notification de check-in à l'heure choisie, quand l'app est installée et ouverte / en arrière-plan.
+- **Rappel fiable même app fermée** : géré par une **Routine Claude** (planification intégrée à Claude, sans l'API) qui envoie chaque jour une notification (email et/ou app Claude) avec le message du coach. Aucun serveur à héberger.
+
 ## Fonctionnalités
 
 | Onglet | Contenu |
