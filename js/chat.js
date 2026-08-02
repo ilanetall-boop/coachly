@@ -21,90 +21,121 @@ const CoachChat = {
   moment() { const h = new Date().getHours(); return h < 11 ? "matin" : h < 16 ? "midi" : "soir"; },
   jourFr() { return new Date().toLocaleDateString("fr-FR", { weekday: "long" }).toLowerCase(); },
 
+  /* Détecte une question (pour ne JAMAIS l'enregistrer comme une donnée). */
+  estQuestion(input, t) {
+    if (input.includes("?")) return true;
+    return /\b(pourquoi|pour quoi|comment|quel|quelle|quels|quelles|combien|est[- ]?ce|qu'est|qu est|c'est quoi|cest quoi|ca veut dire|explique|signifie|qui|quand)\b/.test(t);
+  },
+
   /* ---- Point d'entrée : renvoie le texte de réponse du coach ---- */
   respond(input) {
     const t = this.norm(input);
     const has = (...w) => w.some(x => t.includes(x));
+    const q = this.estQuestion(input, t);
+    const n = this.num(t);
 
-    // 1) SPORT effectué
-    if (has("seance a", "seance b", "seance c", "j'ai fait", "jai fait", "entrainement fait", "muscu faite", "padel", "j'ai couru", "jai marche", "jai fait ma marche")) {
-      let quoi = has("padel") ? "padel" : has("marche", "marché") ? "marche" : has("seance a") ? "Séance A" : has("seance b") ? "Séance B" : has("seance c") ? "Séance C" : "séance";
-      Store.upsert("journal", { date: today(), sport: quoi });
-      return `💪 Noté : ${quoi} enregistré aujourd'hui. Chaque séance te rapproche du physique visé. ${has("padel", "marche") ? "Le cardio, c'est ta base — mais n'oublie pas la muscu pour dessiner épaules et poitrine." : "Bien exécuté, à fond dans les dernières reps ? C'est là que ça compte."} Tu as fait combien de pas aujourd'hui ?`;
+    // 0) CORRECTION d'une pesée erronée (prioritaire)
+    if (has("corrige", "supprime", "efface", "annule", "enleve", "c'est faux", "cest faux", "pas mon poids", "erreur") &&
+        (has("poids", "pese", "pesee", "kg") || n)) {
+      return this._corrigePoids();
     }
 
-    // 2) POIDS
-    if (has("kg", "poids", "pese", "je fais", "balance", "je pese") && this.num(t) && this.num(t) >= 40 && this.num(t) <= 200) {
-      return this._logPoids(this.num(t));
+    // ===== INTENTIONS DE QUESTION / COMMANDE (marchent même en question) =====
+
+    // Objectif / pourquoi 72 kg
+    if (has("tom holland") || (has("objectif", "cible", "but", "72") && (q || has("objectif", "cible")))) {
+      return this._objectif();
     }
-    // Nombre seul plausible comme poids (ex "81.5")
-    if (/^\s*\d{2,3}([.,]\d)?\s*$/.test(t) && this.num(t) >= 50 && this.num(t) <= 130) {
-      return this._logPoids(this.num(t));
+    // Séance du jour
+    if (has("seance du jour", "seance aujourd", "entrainement", "quel sport", "sport aujourd", "je m'entraine", "je mentraine", "quelle seance", "mon programme")) {
+      return this._seanceDuJour();
+    }
+    // Quoi manger
+    if (has("quoi manger", "quel repas", "je mange quoi", "que manger", "idee repas", "propose", "manger ce soir", "manger ce midi", "manger quoi") && !has("craque", "trop mange")) {
+      return this._repas();
+    }
+    // Progrès / bilan
+    if (has("ou j'en suis", "ou jen suis", "progres", "progrès", "stats", "bilan", "resultat", "resultats", "evolution", "combien perdu", "combien j'ai perdu")) {
+      return this._progres();
+    }
+    // Restaurant — quoi commander
+    if (has("commander", "je vais manger dehors", "au restaurant", "invitation", "invite") || (has("shabbat") && q)) {
+      return this._restaurant(t);
+    }
+    // Motivation / coup de mou
+    if (has("motivation", "j'en peux plus", "jen peux plus", "envie d'abandonner", "abandonner", "demoralise", "decourage", "marre", "pas envie", "j'ai pas envie")) {
+      return this._motivation();
     }
 
-    // 3) PAS
-    if (has("pas") && this.num(t) && this.num(t) >= 100) {
-      const pas = Math.round(this.num(t));
-      Store.upsert("journal", { date: today(), pas });
-      const verdict = pas >= 12000 ? "Excellent, tu es une machine." : pas >= 8000 ? "Solide, dans ta moyenne." : "Un peu court — vise 10 000+, une marche digestive après le repas et c'est plié.";
-      return `👟 ${pas.toLocaleString("fr-FR")} pas enregistrés. ${verdict}`;
-    }
-
-    // 4) TOUR DE TAILLE
-    if (has("taille", "ventre", "tour de taille") && this.num(t) && this.num(t) >= 60 && this.num(t) <= 130) {
-      const cm = this.num(t);
-      Store.upsert("taille", { date: today(), cm });
-      const obj = Store.objectif();
-      return `📏 Tour de taille ${cm} cm enregistré. Cible : ${obj.tour_taille_cible_cm} cm (reste ${Math.max(0, cm - obj.tour_taille_cible_cm).toFixed(1)} cm). C'est LE vrai indicateur pour le physique Tom Holland — plus fiable que la balance.`;
-    }
-
-    // 5) J'AI CRAQUÉ / RESTO
-    if (has("craque", "pizza", "gateau", "restaurant", "resto", "j'ai trop mange", "jai trop mange", "burger", "frites", "dessert", "chocolat", "aperitif", "apero")) {
+    // ===== J'AI CRAQUÉ / RESTO (déclaration, pas une question) =====
+    if (has("craque", "pizza", "gateau", "j'ai trop mange", "jai trop mange", "burger", "frites", "dessert", "chocolat", "aperitif", "apero", "resto", "restaurant")) {
       const moment = this.moment();
       const conseil = Nutrition.rattrapage(has("restaurant", "resto") ? "resto" : moment);
       return `🔄 On ne culpabilise pas — on rééquilibre. ${conseil} Un écart ne casse rien ; c'est la tendance sur la semaine qui compte. Tu reprends le contrôle dès le prochain repas. 💪`;
     }
 
-    // 6) SÉANCE DU JOUR
-    if (has("seance du jour", "seance aujourd", "entrainement", "quel sport", "sport aujourd", "je m'entraine", "je mentraine", "quelle seance")) {
-      return this._seanceDuJour();
+    // ===== ENREGISTREMENT DE DONNÉES — JAMAIS si c'est une question =====
+    if (!q) {
+      // Sport effectué
+      if (has("seance a", "seance b", "seance c", "j'ai fait", "jai fait", "entrainement fait", "muscu faite", "padel", "j'ai couru", "jai marche", "jai fait ma marche", "seance faite")) {
+        let quoi = has("padel") ? "padel" : has("marche", "marché") ? "marche" : has("seance a") ? "Séance A" : has("seance b") ? "Séance B" : has("seance c") ? "Séance C" : "séance";
+        Store.upsert("journal", { date: today(), sport: quoi });
+        return `💪 Noté : ${quoi} enregistré aujourd'hui. Chaque séance te rapproche du physique visé. Tu as fait combien de pas aujourd'hui ?`;
+      }
+      // Pas
+      if (has("pas") && n && n >= 100) {
+        const pas = Math.round(n);
+        Store.upsert("journal", { date: today(), pas });
+        const verdict = pas >= 12000 ? "Excellent, tu es une machine." : pas >= 8000 ? "Solide, dans ta moyenne." : "Un peu court — vise 10 000+, une marche digestive après le repas et c'est plié.";
+        return `👟 ${pas.toLocaleString("fr-FR")} pas enregistrés. ${verdict}`;
+      }
+      // Tour de taille (nécessite le mot "taille"/"ventre")
+      if (has("tour de taille", "tour de ventre", "mon ventre", "ma taille") && n && n >= 60 && n <= 130) {
+        Store.upsert("taille", { date: today(), cm: n });
+        const obj = Store.objectif();
+        return `📏 Tour de taille ${n} cm enregistré. Cible : ${obj.tour_taille_cible_cm} cm (reste ${Math.max(0, n - obj.tour_taille_cible_cm).toFixed(1)} cm). C'est LE vrai indicateur pour le physique Tom Holland.`;
+      }
+      // Poids (mot explicite + nombre)
+      if (has("kg", "poids", "pese", "je fais", "balance", "je pese", "kilos") && n && n >= 40 && n <= 200) {
+        return this._logPoids(n);
+      }
+      // Nombre seul plausible comme poids (ex "81.5")
+      if (/^\s*\d{2,3}([.,]\d)?\s*$/.test(t) && n >= 50 && n <= 130) {
+        return this._logPoids(n);
+      }
     }
 
-    // 7) QUOI MANGER
-    if (has("quoi manger", "quel repas", "je mange quoi", "que manger", "idee repas", "propose", "faim") && !has("craque")) {
-      return this._repas();
-    }
-
-    // 8) OÙ J'EN SUIS / PROGRÈS / STATS
-    if (has("ou j'en suis", "ou jen suis", "progres", "progrès", "stats", "bilan", "resultat", "resultats", "evolution", "combien perdu")) {
-      return this._progres();
-    }
-
-    // 9) RESTAURANT — quoi commander
-    if (has("commander", "je vais manger dehors", "au restaurant", "invitation", "invite", "shabbat")) {
-      return this._restaurant(t);
-    }
-
-    // 10) MOTIVATION / COUP DE MOU
-    if (has("motivation", "j'en peux plus", "jen peux plus", "dur", "envie d'abandonner", "abandonner", "demoralise", "decourage", "marre", "fatigue", "pas envie")) {
-      return this._motivation();
-    }
-
-    // 11) OBJECTIF / TOM HOLLAND
-    if (has("tom holland", "objectif", "but", "physique")) {
-      const an = Coach.analysePoids();
-      return `🎯 Objectif : le physique de Tom Holland — sec, épaules larges, poitrine dessinée, ventre plat, taille fine. Pas du volume, du DESSIN.\nOn y va en 2 leviers : (1) perdre le gras (tu es à ${an ? Coach.fmt(an.dernier.kg) + " kg, " + Coach.fmt(an.perteTotale) + " kg perdus" : "en cours"}), (2) construire du muscle avec la muscle poids du corps. Tiens le cap : c'est très atteignable pour toi.`;
-    }
-
-    // 12) SALUT / AIDE / FALLBACK
+    // Salutation
     if (has("salut", "bonjour", "coucou", "hello", "hey", "ca va", "bonsoir")) {
       return `Salut Ilane 💪 Prêt à avancer vers le physique Tom Holland ? Donne-moi tes chiffres du jour (poids, pas, sport) ou demande-moi ta séance / ton repas. On ne relâche rien.`;
+    }
+
+    // ===== C'est une question à laquelle je ne sais pas répondre de façon scriptée =====
+    if (q) {
+      return `Bonne question 🤔 Ce chat intégré gère surtout ton SUIVI (enregistrer poids/pas/sport, sortir ta séance, un repas, ton bilan) — il ne discute pas librement.\nPour une vraie réponse détaillée, pose-la moi dans l'app Claude : réponds à une de tes notifications (6h/10h/14h/20h) et je te réponds à fond.\nSi c'est sur ton objectif, ton programme ou ta nutrition, utilise les mots « objectif », « séance » ou « repas » et je t'aide tout de suite.`;
     }
 
     return `Je t'écoute, coach mode ON 💪 Tu peux me dire :\n• « je pèse 81 » → j'enregistre + j'analyse\n• « 9500 pas » → je note ton activité\n• « séance du jour ? » → ton entraînement\n• « quoi manger ce soir ? » → une idée de repas\n• « j'ai craqué / pizza » → je recalcule ta journée\n• « où j'en suis ? » → tes progrès vers Tom Holland`;
   },
 
   /* ---------- Réponses composées ---------- */
+  _objectif() {
+    const an = Coach.analysePoids();
+    const obj = Store.objectif();
+    const etat = an ? `Tu es à ${Coach.fmt(an.dernier.kg)} kg (${Coach.fmt(an.perteTotale)} kg perdus).` : "";
+    return `🎯 Ton objectif, c'est le physique de Tom Holland : sec, épaules larges, poitrine dessinée, ventre plat, taille fine. Du DESSIN, pas du volume.\n\nÀ propos du chiffre de ${obj.poids_cible_kg} kg : ce n'est PAS une cible figée, juste une estimation éditable pour un physique sec à 1m65. Le vrai repère, c'est ton TOUR DE TAILLE (viser ~${obj.tour_taille_cible_cm} cm) et tes PHOTOS — pas la balance. Tu peux être « Tom Holland » à 70 comme à 74 kg selon ton muscle. Tu peux changer cette cible dans l'onglet Poids & Mesures.\n${etat} On avance sur 2 leviers : perdre le gras + construire du muscle au poids du corps.`;
+  },
+
+  _corrigePoids() {
+    Store.remove("poids", today());
+    // Nettoie aussi le poids du jour dans le journal
+    const s = Store.state();
+    if (s.journal) { const j = s.journal.find(e => e.date === today()); if (j) { delete j.poids; Store._save(s); Store._state = s; } }
+    const an = Coach.analysePoids();
+    const actuel = an ? `Ton poids affiché revient à ${Coach.fmt(an.dernier.kg)} kg (${Coach.fmtDateFr(an.dernier.date)}).` : "";
+    return `✅ Corrigé : j'ai supprimé la pesée enregistrée aujourd'hui. ${actuel}\nSi tu veux enregistrer ton vrai poids du jour, écris-le clairement, par exemple « je pèse 81.5 ».`;
+  },
+
   _logPoids(kg) {
     Store.upsert("poids", { date: today(), kg });
     Store.upsert("journal", { date: today(), poids: kg });
