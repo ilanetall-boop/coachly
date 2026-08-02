@@ -111,9 +111,10 @@ function renderDashboard() {
   ]);
   wrap.appendChild(tiles);
 
+  const objD = Store.objectif();
   const tiles2 = el("div", { class: "grid cols-4" }, [
     statTile("Momentum 7j", `${an.momentum <= 0 ? "" : "+"}${Coach.fmt(an.momentum)} kg`, "moyenne lissée", momCls),
-    statTile("IMC", Coach.fmt(an.imc, 1), an.imc >= 25 ? "surpoids" : "normal"),
+    statTile("IMC", Coach.fmt(an.imc, 1), `cible ${objD.imc_cible} (Tom Holland)`, an.imc >= 25 ? "up" : an.imc <= objD.imc_cible + 0.5 ? "down" : "flat"),
     statTile("Poids le + bas", `${Coach.fmt(an.min.kg)} kg`, Coach.fmtDateFr(an.min.date)),
     an.projection
       ? statTile("Projection cible", Coach.fmtDateFr(an.projection.dateISO), `~${Math.round(an.projection.semaines)} sem au rythme actuel`)

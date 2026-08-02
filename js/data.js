@@ -26,8 +26,9 @@ const PROFILE = {
       "Bras dessinés",
       "PAS un physique de culturiste",
     ],
-    poids_cible_kg: 72,      // estimation athlétique pour 165 cm — éditable
-    tour_taille_cible_cm: 84 // cible « taille fine » — éditable
+    imc_cible: 21.5,         // IMC de Tom Holland (référence donnée par Ilane)
+    poids_cible_kg: 58.5,    // = 21.5 × 1.65² — dérivé de l'IMC cible pour 165 cm
+    tour_taille_cible_cm: 80 // taille fine (ratio taille/hauteur < 0,5) — éditable
   }
 };
 

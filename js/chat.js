@@ -122,8 +122,8 @@ const CoachChat = {
   _objectif() {
     const an = Coach.analysePoids();
     const obj = Store.objectif();
-    const etat = an ? `Tu es à ${Coach.fmt(an.dernier.kg)} kg (${Coach.fmt(an.perteTotale)} kg perdus).` : "";
-    return `🎯 Ton objectif, c'est le physique de Tom Holland : sec, épaules larges, poitrine dessinée, ventre plat, taille fine. Du DESSIN, pas du volume.\n\nÀ propos du chiffre de ${obj.poids_cible_kg} kg : ce n'est PAS une cible figée, juste une estimation éditable pour un physique sec à 1m65. Le vrai repère, c'est ton TOUR DE TAILLE (viser ~${obj.tour_taille_cible_cm} cm) et tes PHOTOS — pas la balance. Tu peux être « Tom Holland » à 70 comme à 74 kg selon ton muscle. Tu peux changer cette cible dans l'onglet Poids & Mesures.\n${etat} On avance sur 2 leviers : perdre le gras + construire du muscle au poids du corps.`;
+    const etat = an ? `Tu es à ${Coach.fmt(an.dernier.kg)} kg (IMC ${Coach.fmt(an.imc)}) — reste ~${Coach.fmt(Math.max(0, an.resteAperdre))} kg.` : "";
+    return `🎯 Objectif : le physique de Tom Holland — sec, épaules larges, poitrine dessinée, ventre plat, taille fine. Du DESSIN, pas du volume.\n\nRepère chiffré : Tom Holland a un IMC ≈ ${obj.imc_cible}. À ta taille (1m65) ça fait ~${obj.poids_cible_kg} kg. Mais le vrai juge, c'est ton TOUR DE TAILLE (~${obj.tour_taille_cible_cm} cm) et tes PHOTOS, pas la balance : comme tu construis du muscle, tu seras peut-être « Tom Holland » un poil au-dessus. Cible éditable dans Poids & Mesures.\n${etat} Deux leviers : perdre le gras + construire du muscle au poids du corps. C'est un marathon, pas un sprint.`;
   },
 
   _corrigePoids() {
