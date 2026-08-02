@@ -172,66 +172,68 @@ function statTile(label, val, sub, cls = "") {
    Onglet : Coach (chat)
 --------------------------------------------------------------------------- */
 function renderCoach() {
-  const wrap = el("div", { class: "grid" });
-  const card = el("div", { class: "card", style: "grid-column:1/-1" });
-  card.appendChild(el("h2", {}, ["💬 Parle à ton coach"]));
+  const view = el("div", { class: "coach-view" });
 
-  // Voyant d'état du coach IA
-  const statut = el("div", { class: "ai-status", id: "aiStatus" }, [
-    el("span", { class: "dot-gray" }, ["●"]), " Vérification du coach IA…"
+  // Barre du haut : voyant d'état (compact) + effacer
+  const statut = el("span", { class: "ai-status-inline", id: "aiStatus" }, [
+    el("span", { class: "dot-gray" }, ["●"]), " Vérification…"
   ]);
-  card.appendChild(statut);
+  const clearBtn = el("button", {
+    class: "icon-btn", title: "Effacer la conversation",
+    onclick: () => { if (confirm("Effacer la conversation ?")) { CoachChat.clear(); rerender(); } }
+  }, ["🗑️"]);
+  view.appendChild(el("div", { class: "coach-top" }, [statut, clearBtn]));
+
   CoachAI.health().then(h => {
     statut.innerHTML = "";
     if (h.ok) {
       const prov = h.provider === "groq" ? "Groq" : h.provider === "gemini" ? "Gemini" : "IA";
       statut.appendChild(el("span", { class: "dot-green" }, ["●"]));
-      statut.appendChild(document.createTextNode(` Coach IA actif (${prov} ${h.model || ""}) — tu discutes avec une vraie IA.`));
+      statut.appendChild(document.createTextNode(` Coach IA actif · ${prov}`));
     } else {
-      const raison = !h.hasKey
-        ? "clé GEMINI_API_KEY absente ou pas encore prise en compte"
-        : (h.error || h.note || "modèle indisponible");
+      const raison = !h.hasKey ? "clé absente" : (h.error || h.note || "modèle indisponible");
       statut.appendChild(el("span", { class: "dot-red" }, ["●"]));
-      statut.appendChild(document.createTextNode(` Coach hors-ligne (repli) — ${raison}.`));
+      statut.appendChild(document.createTextNode(` Hors-ligne · ${String(raison).slice(0, 40)}`));
     }
   });
 
+  // Fil de conversation (prend toute la hauteur dispo)
   const feed = el("div", { class: "chat-feed", id: "chatFeed" });
   const hist = CoachChat.history();
   if (hist.length === 0) {
-    addBubble(feed, "coach", "Salut Ilane 💪 Je suis ton coach intégré. Donne-moi tes chiffres (« je pèse 81 », « 9500 pas », « séance A faite ») ou demande-moi ta séance, un repas, ou « où j'en suis ? ». On vise le physique Tom Holland — on ne relâche rien.");
+    addBubble(feed, "coach", "Salut Ilane 💪 Dis-moi tes chiffres (« je pèse 81 », « 9500 pas », « séance A faite ») ou pose-moi tes questions : séance, repas, resto, motivation… On vise Tom Holland.");
   } else {
     for (const m of hist) addBubble(feed, m.role, m.text);
   }
-  card.appendChild(feed);
+  view.appendChild(feed);
 
-  // Chips d'actions rapides
+  // Chips d'actions rapides (défilement horizontal, une ligne)
   const chips = ["Séance du jour ?", "Quoi manger ?", "Où j'en suis ?", "J'ai craqué", "Motivation"];
-  const chipRow = el("div", { class: "chip-row" }, chips.map(c =>
+  view.appendChild(el("div", { class: "chip-row scroll" }, chips.map(c =>
     el("button", { class: "chip-btn", onclick: () => sendChat(c) }, [c])
-  ));
-  card.appendChild(chipRow);
+  )));
 
-  // Zone de saisie
+  // Saisie collée en bas
   const input = el("input", { type: "text", id: "chatInput", placeholder: "Écris à ton coach…", autocomplete: "off" });
-  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { sendChat(input.value); input.value = ""; } });
-  const send = el("button", { class: "btn", onclick: () => { sendChat(input.value); input.value = ""; } }, ["Envoyer"]);
-  card.appendChild(el("div", { class: "chat-input-row" }, [input, send]));
+  const doSend = () => { const v = input.value; input.value = ""; sendChat(v); input.focus(); };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") doSend(); });
+  const send = el("button", { class: "btn", onclick: doSend }, ["Envoyer"]);
+  view.appendChild(el("div", { class: "chat-input-row" }, [input, send]));
 
-  card.appendChild(el("p", { class: "muted", style: "margin-top:.6rem" }, [
-    el("b", {}, ["Coach IA :"]),
-    " si une clé Gemini est configurée sur le serveur, tu discutes avec une vraie IA (qui voit tes données). ",
-    "Sinon, repli automatique sur le coach hors-ligne (suivi des chiffres). ",
-    "Ton suivi (poids, pas, sport) est enregistré dans les deux cas."
-  ]));
-
-  const clear = el("button", { class: "btn ghost small", onclick: () => { CoachChat.clear(); rerender(); } }, ["🗑️ Effacer la conversation"]);
-  card.appendChild(clear);
-
-  wrap.appendChild(card);
-  setTimeout(() => { const f = $("#chatFeed"); if (f) f.scrollTop = f.scrollHeight; }, 0);
-  return wrap;
+  setTimeout(() => { fitCoachView(); const f = $("#chatFeed"); if (f) f.scrollTop = f.scrollHeight; }, 0);
+  return view;
 }
+
+/* Ajuste la hauteur de l'écran de chat pour que la saisie touche le bas. */
+function fitCoachView() {
+  const v = document.querySelector(".coach-view");
+  if (!v) return;
+  const top = v.getBoundingClientRect().top;
+  const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight) - top - 12;
+  if (h > 260) v.style.height = h + "px";
+}
+window.addEventListener("resize", fitCoachView);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", fitCoachView);
 
 function addBubble(feed, role, text) {
   feed.appendChild(el("div", { class: `bubble ${role}` }, [
