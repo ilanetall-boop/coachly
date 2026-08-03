@@ -49,6 +49,9 @@ const CoachAI = {
     const ta = Coach.analyseTaille();
     if (ta) parts.push(`Dernier tour de taille : ${Coach.fmt(ta.dernier.cm)} cm.`);
 
+    const c = Coach.cibleAdaptative();
+    if (c) parts.push(`Cible du jour (adaptative) : ${c.cibleKcal} kcal, protéines ${c.prot} g, glucides ${c.glu} g, lipides ${c.lip} g ; TDEE estimé ${c.tdee} kcal.`);
+
     // Séance du jour
     try {
       const jour = new Date().toLocaleDateString("fr-FR", { weekday: "long" }).toLowerCase();

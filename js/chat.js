@@ -102,6 +102,7 @@ const CoachChat = {
     if (has("seance du jour", "seance aujourd", "entrainement", "quel sport", "sport aujourd", "je m'entraine", "je mentraine", "quelle seance", "mon programme")) return this._seanceDuJour();
     if (has("quoi manger", "quel repas", "je mange quoi", "que manger", "idee repas", "propose", "manger ce soir", "manger ce midi", "manger quoi") && !has("craque", "trop mange")) return this._repas();
     if (has("ou j'en suis", "ou jen suis", "progres", "progrès", "stats", "bilan", "resultat", "resultats", "evolution", "combien perdu", "combien j'ai perdu")) return this._progres();
+    if (has("calorie", "macro", "proteine", "protéine", "tdee", "cible du jour", "cible calorique", "combien manger", "combien de calories")) return this._cible();
     if (has("commander", "je vais manger dehors", "au restaurant", "invitation", "invite") || (has("shabbat") && q)) return this._restaurant(t);
     if (has("motivation", "j'en peux plus", "jen peux plus", "envie d'abandonner", "abandonner", "demoralise", "decourage", "marre", "pas envie", "j'ai pas envie")) return this._motivation();
     if (has("craque", "pizza", "gateau", "j'ai trop mange", "jai trop mange", "burger", "frites", "dessert", "chocolat", "aperitif", "apero", "resto", "restaurant")) {
@@ -170,6 +171,12 @@ const CoachChat = {
     const idee = banque[new Date().getDate() % banque.length];
     const extra = m === "soir" ? "Le soir : léger en féculents, protéines + légumes en priorité." : m === "matin" ? "Protéines au petit-déj = moins de fringales." : "Protéines + légumes d'abord, féculent mesuré.";
     return `🍽️ Idée ${m} : ${idee}.\n${extra} Envie d'autre chose ? Dis-moi ce que tu as sous la main.`;
+  },
+
+  _cible() {
+    const c = Coach.cibleAdaptative();
+    if (!c) return "Donne-moi une pesée et je te calcule ta cible du jour.";
+    return `🎯 Ta cible du jour (adaptative) :\n• ${c.cibleKcal} kcal\n• Protéines ${c.prot} g · Glucides ${c.glu} g · Lipides ${c.lip} g\nDépense estimée ~${c.tdee} kcal (${c.steps.toLocaleString("fr-FR")} pas/j). ${c.note}`;
   },
 
   _progres() {

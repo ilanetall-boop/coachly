@@ -117,6 +117,53 @@ const Coach = {
     };
   },
 
+  /* Moyenne des pas récents (journal), sinon activité mensuelle seed. */
+  recentSteps() {
+    const j = Store.journal().filter(e => e.pas).slice(-14);
+    if (j.length) return Math.round(j.reduce((s, e) => s + e.pas, 0) / j.length);
+    const a = SEED_ACTIVITE[SEED_ACTIVITE.length - 1];
+    return a ? a.pas_moyen_jour : 8000;
+  },
+
+  /* Facteur d'activité déduit du nombre de pas quotidiens. */
+  activiteFacteur(steps) {
+    return steps < 6000 ? 1.35 : steps < 8000 ? 1.45 : steps < 10000 ? 1.55 : steps < 12500 ? 1.65 : 1.75;
+  },
+
+  /* Cible adaptative (façon MacroFactor, sans logger chaque repas) :
+     - TDEE = BMR (Mifflin-St Jeor) × facteur d'activité (pas réels)
+     - Cible calories pour une perte muscle-préservante (~0,7 kg/sem)
+     - Protéines élevées, plancher de sécurité, note pilotée par la tendance.
+     Tout se recalcule à mesure que le poids et les pas évoluent. */
+  cibleAdaptative() {
+    const p = this.analysePoids();
+    if (!p) return null;
+    const kg = p.dernier.kg;
+    const bmr = 10 * kg + 6.25 * PROFILE.taille_cm - 5 * PROFILE.age + 5;
+    const steps = this.recentSteps();
+    const fa = this.activiteFacteur(steps);
+    const tdee = Math.round(bmr * fa);
+
+    const tauxCible = 0.7; // kg/semaine, muscle-préservant
+    const deficit = Math.round(tauxCible * 7700 / 7); // ≈ 770 kcal/j
+    const plancher = Math.round(bmr * 1.1 / 10) * 10; // ne pas descendre trop bas
+    let cibleKcal = Math.round((tdee - deficit) / 10) * 10;
+    if (cibleKcal < plancher) cibleKcal = plancher;
+
+    const prot = Math.round(1.8 * kg / 5) * 5;   // ~1,8 g/kg
+    const lip = Math.round(0.8 * kg / 5) * 5;    // ~0,8 g/kg
+    const glu = Math.max(0, Math.round((cibleKcal - prot * 4 - lip * 9) / 4));
+
+    const r = p.kgSemaineTendance; // négatif = perte
+    let note;
+    if (r <= -1.1) note = `Tu perds vite (${this.fmt(Math.abs(r))} kg/sem). Ne descends pas sous ${plancher} kcal et vise bien tes ${prot} g de protéines pour garder le muscle.`;
+    else if (r <= -0.4) note = `Rythme idéal — tiens ${cibleKcal} kcal + tes protéines, c'est la zone recomposition.`;
+    else if (r < 0.3) note = `Plateau : le corps s'est adapté. Ajoute ~2000 pas ou retire ~150 kcal.`;
+    else note = `Ça remonte : resserre à ${cibleKcal} kcal et loggue tes repas quelques jours.`;
+
+    return { bmr: Math.round(bmr), tdee, steps, fa, cibleKcal, prot, lip, glu, plancher, tauxCible, note };
+  },
+
   /* Message coach : ton exigeant, honnête, basé sur les chiffres. */
   verdict() {
     const p = this.analysePoids();

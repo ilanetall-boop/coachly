@@ -122,6 +122,24 @@ function renderDashboard() {
   ]);
   wrap.appendChild(tiles2);
 
+  // Cible adaptative (calories + macros)
+  const cible = Coach.cibleAdaptative();
+  if (cible) {
+    wrap.appendChild(el("div", { class: "card" }, [
+      el("h2", {}, ["🎯 Ta cible du jour (adaptative)"]),
+      el("div", { class: "grid", style: "grid-template-columns:repeat(auto-fit,minmax(135px,1fr))" }, [
+        statTile("Calories", `${cible.cibleKcal} kcal`, `pour ~${cible.tauxCible} kg/sem`, "down"),
+        statTile("Protéines", `${cible.prot} g`, "priorité muscle", "down"),
+        statTile("Glucides", `${cible.glu} g`, "énergie"),
+        statTile("Lipides", `${cible.lip} g`, "hormonal"),
+      ]),
+      el("p", { class: "muted", style: "margin-top:.6rem" }, [
+        `Dépense estimée (TDEE) ~${cible.tdee} kcal · ${cible.steps.toLocaleString("fr-FR")} pas/j. ${cible.note}`,
+      ]),
+      el("p", { class: "muted" }, ["S'ajuste automatiquement à ton poids et à ton activité. Le coach s'appuie dessus."]),
+    ]));
+  }
+
   // Graphique
   wrap.appendChild(el("div", { class: "card" }, [
     el("h2", {}, ["📉 Évolution du poids"]),
