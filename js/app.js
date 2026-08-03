@@ -229,8 +229,11 @@ function fitCoachView() {
   const v = document.querySelector(".coach-view");
   if (!v) return;
   const top = v.getBoundingClientRect().top;
-  const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight) - top - 12;
-  if (h > 260) v.style.height = h + "px";
+  const nav = document.querySelector(".bottom-nav");
+  const navH = (nav && getComputedStyle(nav).display !== "none") ? nav.offsetHeight : 0;
+  const vpH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const h = vpH - top - navH - 12;
+  if (h > 240) v.style.height = h + "px";
 }
 window.addEventListener("resize", fitCoachView);
 if (window.visualViewport) window.visualViewport.addEventListener("resize", fitCoachView);
@@ -689,25 +692,39 @@ function importData() {
 /* ---------------------------------------------------------------------------
    Navigation & bootstrap
 --------------------------------------------------------------------------- */
+/* Page "Suivi" = hub regroupant Poids & mesures, check-in quotidien,
+   santé/photos/données (pour tenir dans une barre de nav à 5 entrées). */
+function renderSuiviHub() {
+  const wrap = el("div", { class: "grid" });
+  wrap.appendChild(el("div", { class: "section-title" }, ["⚖️ Poids & mesures"]));
+  wrap.appendChild(renderMesures());
+  wrap.appendChild(el("div", { class: "section-title" }, ["📋 Check-in du jour"]));
+  wrap.appendChild(renderSuivi());
+  wrap.appendChild(el("div", { class: "section-title" }, ["🩸 Santé, photos & données"]));
+  wrap.appendChild(renderAnalyses());
+  return wrap;
+}
+
 const TABS = [
-  { id: "dashboard", label: "📊 Tableau de bord", render: renderDashboard },
-  { id: "coach", label: "💬 Coach", render: renderCoach },
-  { id: "mesures", label: "⚖️ Poids & Mesures", render: renderMesures },
-  { id: "sport", label: "🏋️ Programme sport", render: renderSport },
-  { id: "nutrition", label: "🍽️ Nutrition", render: renderNutrition },
-  { id: "suivi", label: "📋 Suivi quotidien", render: renderSuivi },
-  { id: "analyses", label: "🩸 Analyses & Photos", render: renderAnalyses },
+  { id: "dashboard", label: "Tableau de bord", icon: "📊", short: "Bord", render: renderDashboard },
+  { id: "coach", label: "Coach", icon: "💬", short: "Coach", render: renderCoach },
+  { id: "suivi", label: "Suivi", icon: "⚖️", short: "Suivi", render: renderSuiviHub },
+  { id: "sport", label: "Programme sport", icon: "🏋️", short: "Sport", render: renderSport },
+  { id: "nutrition", label: "Nutrition", icon: "🍽️", short: "Repas", render: renderNutrition },
 ];
-let currentTab = "dashboard";
+let currentTab = "coach"; // ouvre sur le chat (l'atout principal)
 
 function rerender() {
-  const nav = $("#tabs"), content = $("#content");
-  nav.innerHTML = ""; content.innerHTML = "";
+  const nav = $("#tabs"), content = $("#content"), bottom = $("#bottomNav");
+  nav.innerHTML = ""; content.innerHTML = ""; if (bottom) bottom.innerHTML = "";
+  document.body.setAttribute("data-tab", currentTab);
   for (const t of TABS) {
-    nav.appendChild(el("button", {
-      class: t.id === currentTab ? "active" : "",
-      onclick: () => { currentTab = t.id; rerender(); },
-    }, [t.label]));
+    const go = () => { currentTab = t.id; rerender(); };
+    nav.appendChild(el("button", { class: t.id === currentTab ? "active" : "", onclick: go }, [`${t.icon} ${t.label}`]));
+    if (bottom) bottom.appendChild(el("button", { class: "bn-item" + (t.id === currentTab ? " active" : ""), onclick: go }, [
+      el("span", { class: "bn-ic" }, [t.icon]),
+      el("span", { class: "bn-lb" }, [t.short]),
+    ]));
   }
   content.appendChild(TABS.find(t => t.id === currentTab).render());
   window.scrollTo(0, 0);
