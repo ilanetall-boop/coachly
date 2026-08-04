@@ -185,6 +185,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   border-radius:999px; padding:.4rem .8rem; font-size:.82rem; cursor:pointer; white-space:nowrap; flex:0 0 auto; }
 .chip-btn:hover { border-color: var(--accent); }
 .chat-input-row { display:flex; gap:.5rem; flex:0 0 auto; }
+.photo-btn { flex:0 0 auto; padding:.6rem .7rem; font-size:1.1rem; line-height:1; }
+.progress { height:8px; background:var(--bg); border:1px solid var(--border); border-radius:99px; overflow:hidden; margin:.35rem 0; }
+.progress-bar { height:100%; background:linear-gradient(90deg,var(--accent),#3fb950); border-radius:99px; transition:width .3s; }
 .chat-input-row input { flex:1; }
 .typing-dots { letter-spacing:2px; opacity:.6; animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:.9} }

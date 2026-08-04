@@ -60,6 +60,27 @@ const Store = {
     this._state = s;
   },
 
+  /* Ajoute un repas au journal du jour (cumule kcal/protéines). */
+  addMeal(m) {
+    const s = this.state();
+    if (!s.journal) s.journal = [];
+    let j = s.journal.find(e => e.date === today());
+    if (!j) { j = { date: today() }; s.journal.push(j); }
+    j.kcal = Math.round((j.kcal || 0) + (m.kcal || 0));
+    j.prot = Math.round((j.prot || 0) + (m.prot || 0));
+    j.meals = j.meals || [];
+    j.meals.push({ desc: m.desc || "repas", kcal: Math.round(m.kcal || 0), prot: Math.round(m.prot || 0) });
+    this._save(s);
+    this._state = s;
+    return { kcal: j.kcal, prot: j.prot };
+  },
+
+  /* Total consommé aujourd'hui. */
+  consumedToday() {
+    const j = this.journal().find(e => e.date === today());
+    return { kcal: (j && j.kcal) || 0, prot: (j && j.prot) || 0, meals: (j && j.meals) || [] };
+  },
+
   remove(collection, date) {
     const s = this.state();
     if (!s[collection]) return;

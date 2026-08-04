@@ -133,10 +133,20 @@ function renderDashboard() {
         statTile("Glucides", `${cible.glu} g`, "énergie"),
         statTile("Lipides", `${cible.lip} g`, "hormonal"),
       ]),
+      (() => {
+        const cons = Store.consumedToday();
+        if (!cons.kcal) return null;
+        const pct = Math.min(100, Math.round(cons.kcal / cible.cibleKcal * 100));
+        return el("div", { style: "margin-top:.7rem" }, [
+          el("div", { style: "font-weight:700;font-size:.9rem" }, [`🍽️ Consommé : ${cons.kcal}/${cible.cibleKcal} kcal · ${cons.prot}/${cible.prot} g prot`]),
+          el("div", { class: "progress" }, [el("div", { class: "progress-bar", style: `width:${pct}%` })]),
+          el("div", { class: "muted", style: "font-size:.78rem" }, [`Reste ${Math.max(0, cible.cibleKcal - cons.kcal)} kcal · ${Math.max(0, cible.prot - cons.prot)} g protéines`]),
+        ]);
+      })(),
       el("p", { class: "muted", style: "margin-top:.6rem" }, [
         `Dépense estimée (TDEE) ~${cible.tdee} kcal · ${cible.steps.toLocaleString("fr-FR")} pas/j. ${cible.note}`,
       ]),
-      el("p", { class: "muted" }, ["S'ajuste automatiquement à ton poids et à ton activité. Le coach s'appuie dessus."]),
+      el("p", { class: "muted" }, ["📷 Prends tes repas en photo dans le Coach : l'IA les estime et les ajoute ici automatiquement."]),
     ]));
   }
 
@@ -231,15 +241,75 @@ function renderCoach() {
     el("button", { class: "chip-btn", onclick: () => sendChat(c) }, [c])
   )));
 
-  // Saisie collée en bas
+  // Saisie collée en bas (+ bouton photo de repas)
   const input = el("input", { type: "text", id: "chatInput", placeholder: "Écris à ton coach…", autocomplete: "off" });
   const doSend = () => { const v = input.value; input.value = ""; sendChat(v); input.focus(); };
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") doSend(); });
   const send = el("button", { class: "btn", onclick: doSend }, ["Envoyer"]);
-  view.appendChild(el("div", { class: "chat-input-row" }, [input, send]));
+  const photoInput = el("input", { type: "file", accept: "image/*", capture: "environment", style: "display:none" });
+  photoInput.addEventListener("change", () => { if (photoInput.files[0]) sendMealPhoto(photoInput.files[0]); photoInput.value = ""; });
+  const photoBtn = el("button", { class: "btn ghost photo-btn", title: "Analyser une photo de repas", onclick: () => photoInput.click() }, ["📷"]);
+  view.appendChild(el("div", { class: "chat-input-row" }, [photoBtn, input, send, photoInput]));
 
   setTimeout(() => { fitCoachView(); const f = $("#chatFeed"); if (f) f.scrollTop = f.scrollHeight; }, 0);
   return view;
+}
+
+/* Réduit une image (photo) en dataURL JPEG léger avant envoi. */
+function fileToDownscaledDataURL(file, max = 1024, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(cv.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => reject(new Error("image illisible"));
+    img.src = url;
+  });
+}
+
+/* Envoie une photo de repas → estimation IA → log + bilan vs cible. */
+async function sendMealPhoto(file) {
+  const feed = $("#chatFeed");
+  if (!feed) return;
+  CoachChat.push("user", "📷 (photo de repas)");
+  addBubble(feed, "user", "📷 Photo de repas");
+  const typing = el("div", { class: "bubble coach", id: "typingInd" }, [
+    el("div", { class: "bubble-inner" }, [el("span", { class: "typing-dots" }, ["● ● ●"])]),
+  ]);
+  feed.appendChild(typing);
+  feed.scrollTop = feed.scrollHeight;
+
+  let dataUrl;
+  try { dataUrl = await fileToDownscaledDataURL(file); }
+  catch (e) { typing.remove(); addBubble(feed, "coach", "Impossible de lire cette image, réessaie."); return; }
+
+  const r = await CoachAI.analyseMeal(dataUrl);
+  if (typing.parentNode) typing.remove();
+
+  let reply;
+  if (r.ok) {
+    const e = r.est;
+    const items = (e.items || []).map(it => `• ${it.nom} ~${Math.round(it.kcal || 0)} kcal${it.prot ? ` (${Math.round(it.prot)} g prot)` : ""}`).join("\n");
+    const tot = Store.addMeal({ kcal: e.total_kcal, prot: e.total_prot, desc: (e.items || []).map(i => i.nom).join(", ") || "repas" });
+    const c = Coach.cibleAdaptative();
+    let bilan = "";
+    if (c) bilan = `\n📊 Aujourd'hui : ${tot.kcal}/${c.cibleKcal} kcal · ${tot.prot}/${c.prot} g protéines (reste ${Math.max(0, c.cibleKcal - tot.kcal)} kcal, ${Math.max(0, c.prot - tot.prot)} g).`;
+    reply = `📷 Repas estimé :\n${items || "—"}\nTotal ~${Math.round(e.total_kcal || 0)} kcal · ${Math.round(e.total_prot || 0)} g protéines.\n✓ Ajouté.${bilan}${e.commentaire ? `\n\n${e.commentaire}` : ""}`;
+  } else {
+    reply = r.reason === "no_key"
+      ? "L'analyse photo nécessite le coach IA (clé Groq sur le serveur)."
+      : "Je n'ai pas réussi à analyser cette photo. Reprends-la plus nette (de dessus, bien éclairée) ou décris-moi le repas.";
+  }
+  CoachChat.push("coach", reply);
+  addBubble(feed, "coach", reply);
+  feed.scrollTop = feed.scrollHeight;
 }
 
 /* Ajuste la hauteur de l'écran de chat pour que la saisie touche le bas. */

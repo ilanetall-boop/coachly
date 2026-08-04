@@ -37,6 +37,23 @@ const CoachAI = {
     }
   },
 
+  /* Analyse d'une photo de repas → estimation calories/macros. */
+  async analyseMeal(dataUrl, note) {
+    try {
+      const r = await fetch("api/meal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl, note: note || "" }),
+      });
+      if (r.status === 501) return { ok: false, reason: "no_key" };
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.estimation) return { ok: false, reason: d.detail || d.error || ("http_" + r.status) };
+      return { ok: true, est: d.estimation };
+    } catch (e) {
+      return { ok: false, reason: "network" };
+    }
+  },
+
   /* Contexte de données transmis à l'IA pour qu'elle coache sur du concret. */
   buildContext() {
     const parts = [`Date du jour : ${today()}.`];
